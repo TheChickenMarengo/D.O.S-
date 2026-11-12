@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>D.O.S</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=VT323&family=Courier+Prime:wght@400;700&family=Eagle+Lake&family=Limelight&family=Abril+Fatface&family=Archivo+Black&family=Press+Start+2P&family=Rubik+Glitch&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="titlebar">
+  <div class="row"><span class="brand" title="Distraction Obfuscation System">𝗗.𝗢.𝗦</span><span id="docname" title="Documents">/untitled.txt</span><button id="backBtn" style="display:none"></button><button id="menuBtn">[Menu]</button></div>
+  <div class="row" id="tools">
+    <div class="dd"><button class="ddb" title="Documents, import, backup">[File &#9662;]</button><div class="ddp">
+      <button id="newBtn" title="New document">[New document]</button>
+      <button id="docsBtn" title="Switch between documents">[Documents]</button>
+      <button id="openBtn" title="Import a text file as a new document">[Import text file]</button>
+      <button id="copyBtn">[Copy all text]</button>
+      <button id="snapBtn" title="Named snapshots you can restore">[Snapshots]</button>
+      <button id="bkBtn" title="Back up everything as text">[Backup / restore]</button>
+      <button id="searchBtn" title="Search documents, journals, notes, contacts, events">[Search all]</button>
+      <button id="syncBtn" title="Sync with your other device">[Sync now]</button>
+      <button id="lockBtn" title="Lock journal, dreams and contacts (sets a PIN the first time)">[Privacy lock]</button>
+    </div></div>
+    <div class="dd"><button class="ddb" title="Images, drop caps, notes">[Insert &#9662;]</button><div class="ddp">
+      <button id="imgBtn" title="Insert a monochrome pixel image at the cursor">[Image at cursor]</button>
+      <label class="ddr"><span>Image detail</span><select id="detail" title="Image detail (pixel width)"></select></label>
+      <button id="capBtn" title="Toggle a drop cap on the current paragraph (Ctrl+D)">[Drop cap ^D]</button>
+      <label class="ddr"><span>Cap style</span><select id="capstyle" title="Drop cap style"></select></label>
+      <label class="ddr"><span>Cap colour</span><select id="capcolour" title="Drop cap colour for the current paragraph"></select></label>
+      <button id="noteAddBtn" title="Quick note from the selected text">[Note from selection]</button>
+    </div></div>
+    <div class="dd"><button class="ddb" title="Colours, mode, chapters, goal">[Format &#9662;]</button><div class="ddp">
+      <label class="ddr"><span>Colour selection</span><select id="wordcolour" title="Colour the selected words or letters"></select></label>
+      <label class="ddr"><span>Text colour</span><select id="textcolor" title="Overall text colour"></select></label>
+      <label class="ddr"><span>Mode</span><select id="mode" title="Writing mode"><option value="prose">/prose</option><option value="screenplay">/screenplay</option></select></label>
+      <button id="navBtn" title="Chapters / scenes">[Chapters / scenes]</button>
+      <button id="goalBtn" title="Word goal">[Word goal]</button>
+    </div></div>
+    <div class="dd"><button class="ddb" title="Theme and screen settings">[View &#9662;]</button><div class="ddp">
+      <label class="ddr"><span>Theme</span><select id="theme" title="Colour scheme"></select></label>
+      <button class="keep" id="comfBtn" title="Comfort mode: typewriter scrolling, text size">[Comfort mode]</button>
+      <div id="comfctl"><select id="fsize" title="Text size"></select><select id="lspace" title="Line spacing"></select></div>
+      <button class="keep" id="crtBtn" title="CRT screen effect: off / scanlines / full">[CRT]</button>
+      <button class="keep" id="bootBtn" title="DOS startup sequence on / off">[Boot: on]</button>
+    </div></div>
+    <div class="dd"><button class="ddb" title="Journal, calendar, contacts">[Pages &#9662;]</button><div class="ddp">
+      <button id="journalBtn" title="Open or start today's journal entry">[Journal: today]</button>
+      <button id="dreamBtn" title="Open or start last night's dream entry">[Dream journal: today]</button>
+      <button id="calBtn" title="Month calendar with journal days, events and birthdays">[Calendar]</button>
+      <button id="peopleBtn" title="Contacts with photos">[Contacts]</button>
+    </div></div>
+    <span class="sep">|</span>
+    <button id="notesBtn" title="Notes board (ideas)">[Notes]</button>
+    <button id="findBtn" title="Find and replace (Ctrl+F)">[Find]</button>
+    <button id="fsBtn">[Full]</button>
+    <button id="palBtn">[Cmds ^K]</button>
+    <button id="helpBtn">[?]</button>
+  </div>
+</div>
+
+<div id="scroller">
+  <div id="doc">
+    <div id="editor" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true"></div>
+    <div id="eof">~ EOF ~</div>
+  </div>
+</div>
+
+<div id="boot" class="show"><pre id="bootpre"></pre><div id="bootskip">tap or press any key to skip</div></div>
+
+<div id="calview" class="view">
+  <div class="vbar"><button id="calprev">[&lt;]</button><span id="caltitle"></span><button id="calnext">[&gt;]</button><button id="caltoday">[Today]</button><button id="calclose">[Back to writing]</button></div>
+  <div class="vscroll"><div id="calgrid"></div><div id="calday"></div></div>
+</div>
+
+<div id="peopleview" class="view">
+  <div class="vbar"><button id="pnew">[+ Contact]</button><input type="text" id="psearch" placeholder="search contacts" autocomplete="off"><span id="pcount"></span><button id="pclose">[Back to writing]</button></div>
+  <div class="vscroll"><div id="pgrid"></div></div>
+</div>
+
+<div id="notesview">
+  <div id="nbar">
+    <button id="nnew">[+ Note]</button>
+    <button id="nimg">[+ Image]</button>
+    <input type="text" id="nsearch" placeholder="search notes" autocomplete="off">
+    <select id="nfilter" title="Filter by project"></select>
+    <select id="ncolfilter" title="Filter by colour"></select>
+    <select id="nstfilter" title="Filter by sticker"></select>
+    <button id="nviewBtn">[Board view]</button>
+    <span id="ncount"></span>
+    <button id="nclose">[Back to writing]</button>
+  </div>
+  <div id="nscroll"><div id="ngrid" class="grid"></div></div>
+</div>
+
+<div id="statusbar">
+  <div class="row"><span id="stats">W:0 C:0</span><span id="pos">P:1/1</span><span id="goalbar"></span><span id="hint"></span></div>
+  <div class="row"><span id="saved">[autosave: on]</span><span id="syncst" style="display:none;cursor:pointer" title="Sync with your other device"></span><span>[Esc] bars</span></div>
+</div>
+
+<div id="find"><input type="text" id="fq" placeholder="find" autocomplete="off"><input type="text" id="fr" placeholder="replace" autocomplete="off"><label><input type="checkbox" id="fcase">Aa</label><label><input type="checkbox" id="fword">word</label><button id="fprev">[&lt;]</button><button id="fnext">[&gt;]</button><button id="frep">[Replace]</button><button id="fall">[All]</button><span id="fcount"></span><button id="fclose">[x]</button></div>
+
+<button id="handle" aria-label="Show menu">[≡ Menu]</button>
+<div id="msg"></div>
+<div id="gs" class="overlay"><div class="box plain"><input type="text" id="gsq" placeholder="search everything" autocomplete="off"><div id="gslist"></div></div></div>
+<div id="lock"><div class="lkbox"><div id="lktitle"></div><input type="password" id="lkin" inputmode="numeric" autocomplete="off" placeholder="PIN"><div id="lkmsg"></div><div class="lkb"><button id="lkok">[OK]</button><button id="lkcancel">[Cancel]</button></div></div></div>
+<div id="help" class="overlay"><div class="box" id="helpText"></div></div>
+<div id="pal" class="overlay"><div class="box"><input id="palin" placeholder="/ type a command" autocomplete="off"><div id="pallist"></div></div></div>
+<div id="docs" class="overlay"><div class="box plain"><h3>/documents</h3><div id="doclist" class="list"></div><div class="row2"><input type="text" id="docin" placeholder="name" autocomplete="off"><button id="doccreate">[New]</button><button id="docren">[Rename]</button><button id="docdel">[Delete]</button></div></div></div>
+<div id="snaps" class="overlay"><div class="box plain"><h3>/snapshots</h3><div class="row2"><input type="text" id="snapin" placeholder="name (optional)" autocomplete="off"><button id="snapsave">[Save snapshot]</button></div><div id="snaplist" class="list" style="margin-top:10px;max-height:45vh;overflow-y:auto"></div></div></div>
+<div id="nav" class="overlay"><div class="box plain"><h3>/contents</h3><div id="navlist" class="list" style="max-height:50vh;overflow-y:auto"></div><div class="row2"><button id="navcaps">[Cap chapter openers]</button><button id="navnocaps">[Remove all caps]</button></div></div></div>
+<div id="goal" class="overlay"><div class="box plain"><h3>/word goal</h3><div class="row2"><input type="number" id="goaln" min="0" step="50" placeholder="words"><select id="goalm"><option value="day">per day</option><option value="total">total</option></select></div><div class="row2"><button id="goalset">[Set]</button><button id="goalclr">[Clear]</button></div></div></div>
+<div id="bk" class="overlay"><div class="box plain"><h3 id="bktitle">/backup</h3><div id="bkinfo" style="opacity:.7;font-size:15px"></div><textarea id="bkta" spellcheck="false"></textarea><div class="row2"><button id="bkcopy">[Copy]</button><button id="bkrestore">[Restore from box]</button></div></div></div>
+
+<div id="nedit" class="overlay"><div class="box plain"><h3>/note</h3><canvas id="nprev" style="display:none"></canvas><div id="nsizerow" class="row2" style="display:none;margin:0 0 8px"><span>image size</span><input type="range" id="nsize" min="20" max="100" step="5" style="flex:1"></div><textarea id="ntext" rows="8" style="width:100%;box-sizing:border-box" placeholder="Type your idea..."></textarea><div id="ncols" class="row2"></div><div id="nstick" class="row2"></div><div class="row2"><select id="nproj" title="Link this note to a project (document)"></select><button id="nimgbtn">[Add image]</button><button id="nsave" title="Save this image to your device" style="display:none">[Save image]</button><button id="npin">[Pin]</button><button id="nsend">[Send to manuscript]</button></div><div class="row2"><button id="nlink" title="Link this note to the spot where your cursor last was in the manuscript">[Link to cursor]</button><button id="ngo">[Go to link]</button><span id="nlinkinfo" style="opacity:.7;font-size:15px"></span></div><div class="row2"><button id="ndel">[Delete]</button><button id="ndone">[Done]</button></div></div></div>
+
+<div id="cedit" class="overlay"><div class="box plain"><h3>/contact</h3>
+<div class="row2" style="margin-top:0"><canvas id="cphoto" width="8" height="8"></canvas><div style="display:flex;flex-direction:column;gap:6px"><button id="cphotoBtn">[Add photo]</button><button id="cphotoDel">[Remove photo]</button></div></div>
+<div class="frm">
+<label>Name<input type="text" id="cname" autocomplete="off"></label>
+<label>Nickname<input type="text" id="cnick" autocomplete="off"></label>
+<label>Phone<input type="tel" id="cphone" autocomplete="off"></label>
+<label>Email<input type="email" id="cemail" autocomplete="off"></label>
+<label>Birthday (type day/month/year, e.g. 16/1/1986)<input type="text" id="cbday" autocomplete="off" inputmode="numeric" placeholder="d/m/y"><small id="cbhint" style="opacity:.75"></small></label>
+<label>Age (used when there is no birthday)<input type="number" id="cage" min="0" max="130"></label>
+<label>Address<textarea id="caddr" rows="2"></textarea></label>
+<label>Notes<textarea id="cnotes" rows="3"></textarea></label>
+</div>
+<div id="cfields"></div>
+<datalist id="cfsug"><option value="Work phone"><option value="Website"><option value="Instagram"><option value="Partner"><option value="Anniversary"><option value="Nickname"><option value="How we met"></datalist>
+<div class="row2"><button id="cfadd">[+ Custom field]</button></div>
+<div class="row2"><button id="cdel">[Delete]</button><button id="cdone">[Done]</button></div></div></div>
+
+<div id="photoview" class="overlay"><div class="box plain" style="text-align:center"><canvas id="pvcanvas" width="8" height="8" style="display:block;width:100%;height:auto;image-rendering:pixelated;border:1px solid var(--fg);cursor:pointer"></canvas><div class="row2" style="justify-content:center"><button id="pvsave">[Save image]</button><button id="pvclose">[Close]</button></div></div></div>
+
+<div id="imgsrc" class="overlay"><div class="box plain"><h3>/add image</h3><div class="row2"><button id="imgcam">[Take photo]</button><button id="imglib">[Choose from library]</button><button id="imgcancel">[Cancel]</button></div></div></div>
+
+<div id="imgexp" class="overlay"><div class="box plain"><h3>/save image</h3><canvas id="expprev" style="display:block;max-width:100%;max-height:180px;margin:0 auto 10px;image-rendering:pixelated"></canvas><div class="row2"><span>Size</span><select id="expscale"><option value="1">1x (original pixels)</option><option value="2">2x</option><option value="4" selected>4x</option><option value="8">8x</option></select></div><div class="row2"><button id="expshown">[Save as shown]</button><button id="expbw">[Black on white]</button><button id="exptr">[Transparent]</button></div><div class="row2"><button id="expcancel">[Cancel]</button></div></div></div>
+
+<div id="slash"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
