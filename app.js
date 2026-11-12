@@ -1739,8 +1739,10 @@
   }
   const CF = { cname: 'name', cnick: 'nick', cphone: 'phone', cemail: 'email', cage: 'age', caddr: 'addr', cnotes: 'notes' };
   Object.keys(CF).forEach(id => $(id).addEventListener('input', () => { if (editingC) { editingC[CF[id]] = $(id).value; editingC.t = Date.now(); savePeopleLater(); } }));
-  $('cbday').addEventListener('input', () => {
-    if (!editingC) return; const v = $('cbday').value, r = parseBirthday(v), h = $('cbhint');
+  $('cbday').addEventListener('input', e => {
+    if (!editingC) return; const el = $('cbday');
+    if (e && e.inputType && e.inputType.indexOf('insert') === 0 && el.selectionStart === el.value.length && (/^\d{2}$/.test(el.value) && +el.value >= 1 || /^\d{1,2}\/\d{2}$/.test(el.value))) el.value += '/';
+    const v = el.value, r = parseBirthday(v), h = $('cbhint');
     editingC.bdayRaw = v;
     if (r === null) { h.textContent = 'Not recognised yet. Type it as day/month/year, e.g. 16/1/1986.'; return; }
     editingC.bday = r; h.textContent = r ? '= ' + bdayText(r) : ''; editingC.t = Date.now(); savePeopleLater();
