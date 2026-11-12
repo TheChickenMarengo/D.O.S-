@@ -1739,19 +1739,20 @@
   }
   const CF = { cname: 'name', cnick: 'nick', cphone: 'phone', cemail: 'email', cage: 'age', caddr: 'addr', cnotes: 'notes' };
   Object.keys(CF).forEach(id => $(id).addEventListener('input', () => { if (editingC) { editingC[CF[id]] = $(id).value; editingC.t = Date.now(); savePeopleLater(); } }));
-  $('cbday').addEventListener('input', e => {
+  $('cbday').addEventListener('input', () => {
     if (!editingC) return; const el = $('cbday');
-    if (e && e.inputType && e.inputType.indexOf('insert') === 0 && el.selectionStart === el.value.length && (/^\d{2}$/.test(el.value) && +el.value >= 1 || /^\d{1,2}\/\d{2}$/.test(el.value))) el.value += '/';
+    const grew = el.value.length > (+el.dataset.pl || 0); el.dataset.pl = el.value.length;
+    if (grew && (/^\d{2}$/.test(el.value) && +el.value >= 1 || /^\d{1,2}\/\d{2}$/.test(el.value))) { el.value += '/'; el.dataset.pl = el.value.length; try { el.setSelectionRange(el.value.length, el.value.length); } catch (x) { /* ignore */ } }
     const v = el.value, r = parseBirthday(v), h = $('cbhint');
     editingC.bdayRaw = v;
     if (r === null) { h.textContent = 'Not recognised yet. Type it as day/month/year, e.g. 16/1/1986.'; return; }
     editingC.bday = r; h.textContent = r ? '= ' + bdayText(r) : ''; editingC.t = Date.now(); savePeopleLater();
   });
-  $('cbday').addEventListener('focus', () => { if (editingC && editingC.bday) $('cbday').value = bdayNumeric(editingC.bday); });
+  $('cbday').addEventListener('focus', () => { if (editingC && editingC.bday) $('cbday').value = bdayNumeric(editingC.bday); $('cbday').dataset.pl = $('cbday').value.length; });
   $('cbday').addEventListener('blur', () => { if (editingC && editingC.bday && parseBirthday($('cbday').value) !== null) { $('cbday').value = bdayText(editingC.bday); $('cbhint').textContent = ''; } });
   function openContact(c) {
     editingC = c; Object.keys(CF).forEach(id => { $(id).value = c[CF[id]] || ''; });
-    $('cbday').value = c.bday ? bdayText(c.bday) : ''; $('cbhint').textContent = '';
+    $('cbday').value = c.bday ? bdayText(c.bday) : ''; $('cbday').dataset.pl = $('cbday').value.length; $('cbhint').textContent = '';
     if (!c.fields) c.fields = []; drawContactFields(c); drawContactPhoto(c); openOv('cedit');
     if (!c.name && !c.phone && !c.email) $('cname').focus();
   }
