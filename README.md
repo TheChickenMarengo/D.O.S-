@@ -16,3 +16,7 @@ Host the repo over HTTPS (GitHub Pages: Settings > Pages > Deploy from branch `m
 - Desktop Chrome/Edge: install icon in the address bar
 
 It then runs full screen and works offline. Data stays in that app's own local storage (separate from the Claude artifact copy, and no cross-device sync outside the artifact; use Backup to move writing between them).
+
+## Sync between devices (installed app)
+
+File > Sync now (or the status text at the bottom) opens GitHub sync setup. Create a classic token at github.com/settings/tokens with only the `gist` scope, paste it on each device, and your writing syncs through one private gist called "D.O.S sync data". Inside the Claude artifact, sync uses the artifact's own database instead and needs no setup.

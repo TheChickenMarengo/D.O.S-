@@ -246,3 +246,5 @@
 #lock input { margin:14px 0 6px; width:70%; text-align:center; font:inherit; font-size:24px; letter-spacing:.3em; background:var(--bg); color:var(--fg); border:1px solid var(--fg); padding:6px; }
 #lkmsg { min-height:1.4em; opacity:.85; }
 #lock .lkb { margin-top:8px; display:flex; gap:14px; justify-content:center; }
+#ghtok { width:100%; box-sizing:border-box; background:var(--bg); color:var(--fg); border:1px solid var(--fg); font:inherit; padding:6px 8px; margin:8px 0; }
+#ghmsg { min-height:1.4em; }

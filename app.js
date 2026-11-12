@@ -1998,7 +1998,7 @@
   if (!SY.st || typeof SY.st !== 'object') SY.st = {};
   ['base', 'lt', 'lh'].forEach(k => { if (!SY.st[k]) SY.st[k] = {}; });
   if (!SY.st.dev) SY.st.dev = Math.random().toString(36).slice(2, 8);
-  const SYCH = 40000;
+  const SYCH = 40000, syCh = () => (SY.col && SY.col.ch) || SYCH;
   function hashStr(s) { let h = 5381 | 0; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + '.' + s.length; }
   function sySave() { store(SY.key, JSON.stringify(SY.st)); }
   function syStatus(t) { const el = $('syncst'); if (!el) return; el.style.display = SY.ready || t ? '' : 'none'; el.textContent = '[sync: ' + t + ']'; }
@@ -2033,8 +2033,8 @@
   function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
   async function sw(p) { try { return await p(); } catch (e) { if (e && (e.code === 'resource_exhausted' || e.code === 'unavailable')) { await wait(1800); return await p(); } throw e; } }
   async function syWrite(k, str, oldN) {
-    const n = Math.max(1, Math.ceil(str.length / SYCH));
-    for (let i = 0; i < n; i++) await sw(() => SY.col.doc('c~' + k + '~' + i).set({ k: 'c', c: str.slice(i * SYCH, (i + 1) * SYCH) }));
+    const CH = syCh(), n = Math.max(1, Math.ceil(str.length / CH));
+    for (let i = 0; i < n; i++) await sw(() => SY.col.doc('c~' + k + '~' + i).set({ k: 'c', c: str.slice(i * CH, (i + 1) * CH) }));
     await sw(() => SY.col.doc('h~' + k).set({ k: 'h', key: k, h: hashStr(str), n, t: Date.now(), dev: SY.st.dev }));
     for (let i = n; i < (oldN || 0); i++) await sw(() => SY.col.doc('c~' + k + '~' + i).delete());
   }
@@ -2097,7 +2097,8 @@
     a.unshift({ t: Date.now(), n: name, s, w: wordsOf(s) }); store(K.snaps + id, JSON.stringify(a.slice(0, 40)));
   }
   async function syncRun(manual) {
-    if (!SY.on || !SY.ready) return;
+    if (!SY.ready) { if (manual) openGh(); return; }
+    if (!SY.on) return;
     if (SY.busy) { SY.again = true; return; }
     SY.busy = true; syStatus('working');
     const fl = {}; let pushed = 0, pulled = 0, conflicts = 0;
@@ -2110,7 +2111,7 @@
       const keys = new Set(Object.keys(loc).concat(Object.keys(heads), Object.keys(base)));
       const L0 = {}; keys.forEach(k => { L0[k] = loc[k] != null ? hashStr(loc[k]) : null; });
       const order = Array.from(keys).sort((a, b) => (a.indexOf('img_') === 0 ? 0 : a.indexOf('d_') === 0 ? 1 : 2) - (b.indexOf('img_') === 0 ? 0 : b.indexOf('d_') === 0 ? 1 : 2));
-      SY.apply = true;
+      const baseBefore = Object.assign({}, base); SY.apply = true;
       for (const k of order) {
         const head = heads[k], L = L0[k], R = head && !head.del ? head.h : null, B = base[k] || null;
         if (L != null && SY.st.lh[k] !== L) { SY.st.lh[k] = L; SY.st.lt[k] = SY.lastChange || Date.now(); }
@@ -2136,6 +2137,7 @@
         else if (act === 'push') { await syWrite(k, loc[k], head && head.n); base[k] = L; pushed++; }
         else if (act === 'pushDel') { await syTomb(k, head && head.n); delete base[k]; pushed++; }
       }
+      if (SY.col.flush) { try { await SY.col.flush(); } catch (e) { SY.st.base = baseBefore; SY.col.reset(); throw e; } }
       if (fresh && pulled) { lib.list.filter(d => !heads['d_' + d.uid] && !(d.id === lib.cur ? serialize() : (load(K.body + d.id) || '')).trim()).forEach(d => removeLocalDoc(d.uid, fl)); }
       if (fl.img) { store(K.imgs, JSON.stringify(images)); for (const k in imgEls) delete imgEls[k]; }
       if (fl.lib) { if (!curDoc()) lib.cur = lib.list[0].id; saveLib(); }
@@ -2158,21 +2160,85 @@
   }
   function syncSoon() { if (!SY.on || !SY.ready) return; clearTimeout(SY.t); SY.t = setTimeout(() => syncRun(), 12000); }
   syncHook = k => { if (SY.apply) return; if (k === K.idx || k === K.notes || k === K.events || k === K.people || k === K.imgs || k.indexOf(K.body) === 0) { SY.lastChange = Date.now(); syncSoon(); } };
-  function setSync(on) { SY.on = on; store('dos-writer-sync-on', on ? '1' : '0'); if (!SY.ready) { flash('SYNC NEEDS THE ARTIFACT DATABASE - NOT AVAILABLE HERE'); return; } if (on) { syStatus('on'); syncRun(true); } else { clearTimeout(SY.t); syStatus('off'); flash('SYNC OFF'); } }
+  function setSync(on) { SY.on = on; store('dos-writer-sync-on', on ? '1' : '0'); if (!SY.ready) { openGh(); return; } if (on) { syStatus('on'); syncRun(true); } else { clearTimeout(SY.t); syStatus('off'); flash('SYNC OFF'); } }
+  // ---------- GitHub Gist sync (used when the artifact database is not available, e.g. the installed web app) ----------
+  const GHK = 'dos-writer-gh';
+  function ghCfg() { try { const o = JSON.parse(load(GHK) || 'null'); return o && o.t ? o : null; } catch (e) { return null; } }
+  async function ghReq(tok, method, path, body, etag) {
+    const h = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' };
+    if (body) h['Content-Type'] = 'application/json'; if (etag) h['If-None-Match'] = etag;
+    const r = await fetch('https://api.github.com' + path, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
+    if (r.status === 304) return { notModified: true };
+    if (!r.ok) { const e = new Error('GitHub ' + r.status); e.status = r.status; e.code = r.status === 401 ? 'revoked' : (r.status === 403 || r.status === 429) ? 'resource_exhausted' : 'unavailable'; throw e; }
+    return { json: await r.json(), etag: r.headers.get('ETag') };
+  }
+  function gistAdapter(tok, id) {
+    let files = {}, heads = {}, etag = null, pend = {}, hops = {};
+    async function fetchGist(useTag) {
+      const r = await ghReq(tok, 'GET', '/gists/' + id, null, useTag ? etag : null);
+      if (r.notModified) return;
+      const nf = {}; for (const n in r.json.files) { const f = r.json.files[n]; let c = f.content; if (f.truncated) { const rr = await fetch(f.raw_url); c = await rr.text(); } nf[n] = c; }
+      files = nf; etag = r.etag; try { heads = JSON.parse(files['_heads.json'] || '{}'); } catch (e) { heads = {}; }
+    }
+    const isHead = k => k.indexOf('h~') === 0;
+    return {
+      buffered: true, ch: 400000,
+      doc: k => ({
+        id: k,
+        set: async d => { if (isHead(k)) { heads[k.slice(2)] = d; hops[k.slice(2)] = d; } else { files[k] = d.c; pend[k] = d.c; } },
+        delete: async () => { if (isHead(k)) { delete heads[k.slice(2)]; hops[k.slice(2)] = null; } else { delete files[k]; pend[k] = null; } },
+        get: async () => ({ exists: !isHead(k) && k in files, data: () => ({ c: files[k] }) })
+      }),
+      where: () => ({ get: async () => { await fetchGist(true); return { docs: Object.keys(heads).map(k => ({ id: 'h~' + k, data: () => heads[k] })) }; } }),
+      reset: () => { pend = {}; hops = {}; etag = null; },
+      flush: async () => {
+        if (!Object.keys(pend).length && !Object.keys(hops).length) return;
+        const r = await ghReq(tok, 'GET', '/gists/' + id); let fresh = {}; try { fresh = JSON.parse((r.json.files['_heads.json'] || {}).content || '{}'); } catch (e) { fresh = {}; }
+        for (const k in hops) { if (hops[k]) fresh[k] = hops[k]; else delete fresh[k]; }
+        const payload = { '_heads.json': { content: JSON.stringify(fresh) } };
+        for (const n in pend) payload[n] = pend[n] == null ? null : { content: pend[n] };
+        await ghReq(tok, 'PATCH', '/gists/' + id, { files: payload });
+        pend = {}; hops = {}; etag = null;
+      }
+    };
+  }
+  async function ghConnect(tok) {
+    const u = await ghReq(tok, 'GET', '/user');
+    let id = null;
+    for (let p = 1; p <= 5 && !id; p++) {
+      const r = await ghReq(tok, 'GET', '/gists?per_page=100&page=' + p); const a = r.json || [];
+      const g = a.find(x => x.description === 'D.O.S sync data'); if (g) id = g.id; if (a.length < 100) break;
+    }
+    if (!id) { const r = await ghReq(tok, 'POST', '/gists', { description: 'D.O.S sync data', public: false, files: { '_heads.json': { content: '{}' } } }); id = r.json.id; }
+    store(GHK, JSON.stringify({ t: tok, g: id, u: u.json.login })); return id;
+  }
+  function ghStart() { const c = ghCfg(); if (!c) return false; SY.col = gistAdapter(c.t, c.g); SY.ch = SY.col.ch; SY.ready = true; SY.kind = 'gist'; syStatus(SY.on ? 'on' : 'off'); return true; }
+  function openGh() {
+    const c = ghCfg(); $('ghstate').textContent = c ? 'Connected as ' + c.u + '. Your writing syncs to a private gist on your GitHub.' : 'Not connected.';
+    $('ghtok').value = ''; $('ghdis').style.display = c ? '' : 'none'; $('ghmsg').textContent = ''; openOv('ghov'); if (!c) $('ghtok').focus();
+  }
+  $('ghcon').onclick = async () => {
+    const tok = $('ghtok').value.trim(); if (!tok) { $('ghmsg').textContent = 'Paste a token first.'; return; }
+    $('ghmsg').textContent = 'Connecting...';
+    try { await ghConnect(tok); ghStart(); $('ghmsg').textContent = ''; closeOv('ghov'); flash('GITHUB SYNC CONNECTED'); syncRun(true); }
+    catch (e) { $('ghmsg').textContent = e.status === 401 ? 'GitHub rejected that token.' : e.status === 403 ? 'Token cannot use gists. Tick the "gist" scope.' : 'Could not connect. Check the token and your connection.'; }
+  };
+  $('ghdis').onclick = () => { try { localStorage.removeItem(GHK); } catch (e) { /* ignore */ } SY.ready = false; SY.col = null; syStatus('off'); $('syncst').style.display = 'none'; closeOv('ghov'); flash('GITHUB SYNC DISCONNECTED'); };
+
   async function syncInit() {
     try {
-      if (!window.claude || !claude.use) return;
-      const db = await claude.use('db'), us = await claude.use('user'); if (!db || !us) return;
-      const id = await us.id(); if (!id) return;
-      SY.col = db.collection('data/users/' + id); SY.ready = true; syStatus(SY.on ? 'on' : 'off');
-      if (SY.on) setTimeout(() => syncRun(), 1500);
-    } catch (e) { /* sync unavailable */ }
+      if (window.claude && claude.use) {
+        const db = await claude.use('db'), us = await claude.use('user'), id = db && us ? await us.id() : null;
+        if (db && id) { SY.col = db.collection('data/users/' + id); SY.ready = true; SY.kind = 'artifact'; syStatus(SY.on ? 'on' : 'off'); if (SY.on) setTimeout(() => syncRun(), 1500); return; }
+      }
+    } catch (e) { /* fall through */ }
+    if (ghStart() && SY.on) setTimeout(() => syncRun(), 1500);
   }
   document.addEventListener('visibilitychange', () => { if (!SY.on || !SY.ready) return; if (document.hidden) { if (SY.lastChange > SY.last) syncRun(); } else syncRun(); });
   window.addEventListener('online', () => syncRun());
   setInterval(() => { if (SY.on && SY.ready && !document.hidden && Date.now() - SY.last > 45000) syncRun(); }, 15000);
-  $('syncBtn').onclick = () => { if (!SY.ready) flash('SYNC NOT AVAILABLE HERE'); else if (!SY.on) setSync(true); else syncRun(true); };
-  $('syncst').onclick = () => { if (!SY.ready) flash('SYNC NOT AVAILABLE HERE'); else if (!SY.on) setSync(true); else syncRun(true); };
+  $('syncBtn').onclick = () => { if (!SY.ready) openGh(); else if (!SY.on) setSync(true); else syncRun(true); };
+  $('syncst').onclick = () => { if (!SY.ready) openGh(); else if (!SY.on) setSync(true); else syncRun(true); };
 
   // ---------- global search ----------
   const GSKIND = { doc: 'DOC', journal: 'JOURNAL', dream: 'DREAM', note: 'NOTE', contact: 'CONTACT', event: 'EVENT' };
