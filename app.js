@@ -2363,7 +2363,7 @@
   loadLib(); showName();
   loadDoc(load(K.body + lib.cur) || ''); initGoalDay();
   commit(); refresh();
-  if (bootOn() && !reduceMotion()) runBoot(); else $('boot').classList.remove('show');
+  if (bootOn()) runBoot(); else $('boot').classList.remove('show');
   if (document.fonts) Promise.all(FRAMED_SPECS.map(f => document.fonts.load(f, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))).then(() => repaintAll()).catch(() => {});
   if (document.fonts) document.fonts.load('700 100px "Space Grotesk"').then(() => { for (const k in inkCache) delete inkCache[k]; for (const k in dotCache) delete dotCache[k]; repaintAll(); }).catch(() => {});
   editor.focus(); setCaret(blocks().filter(b => !isImg(b)).pop(), 1e9);
