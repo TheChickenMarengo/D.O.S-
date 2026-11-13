@@ -1517,15 +1517,15 @@
   const repaintNoteImgs = () => { if (body.classList.contains('notes')) renderNotes(); else if (body.classList.contains('contacts')) renderPeople(); };
 
   // ---------- menus (dropdowns) ----------
-  const dds = Array.from(document.querySelectorAll('.dd'));
+  const dds = Array.from(document.querySelectorAll('.mgrp'));
   function closeDD(except) { dds.forEach(d => { if (d !== except) d.classList.remove('open'); }); }
   dds.forEach(d => {
-    d.querySelector('.ddb').addEventListener('click', e => { e.stopPropagation(); const o = !d.classList.contains('open'); closeDD(); d.classList.toggle('open', o); });
-    const pn = d.querySelector('.ddp');
+    d.querySelector('.mgb').addEventListener('click', e => { e.stopPropagation(); const o = !d.classList.contains('open'); closeDD(); d.classList.toggle('open', o); });
+    const pn = d.querySelector('.mgp');
     pn.addEventListener('click', e => { const b = e.target.closest('button'); if (b && !b.classList.contains('keep')) closeDD(); });
     pn.addEventListener('change', () => setTimeout(closeDD, 0));
   });
-  document.addEventListener('pointerdown', e => { if (!e.target.closest('.dd')) closeDD(); }, true);
+  document.addEventListener('pointerdown', e => { if (!e.target.closest('.mgrp')) closeDD(); }, true);
   // ---------- save images to the device ----------
   let expId = null, dlP = null;
   const getDL = () => dlP || (dlP = (window.claude && window.claude.use) ? Promise.resolve(window.claude.use('downloads')).catch(() => null) : Promise.resolve(null));
@@ -1890,7 +1890,7 @@
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      if (document.querySelector('.dd.open')) { closeDD(); return; }
+      if (document.querySelector('.mgrp.open')) { closeDD(); return; }
       const ov = document.querySelector('#imgexp.show, #imgsrc.show, #photoview.show') || document.querySelector('.overlay.show');
       if (ov) { closeOv(ov.id); return; }
       if ($('find').classList.contains('show')) { closeFind(); return; }

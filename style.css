@@ -37,14 +37,14 @@
   body.comfort #comfctl { display:flex; gap:6px; }
   #comfctl select { flex:1; }
   #titlebar { position:relative; }
-  .dd { position:relative; display:inline-block; }
-  .ddb { padding:0 2px; }
-  .dd.open .ddb { background:var(--bar-fg); color:var(--bar-bg); }
-  .ddp { display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:30; min-width:210px; flex-direction:column; gap:6px; padding:8px; background:var(--bar-bg); color:var(--bar-fg); border:1px solid currentColor; text-align:left; }
-  .dd.open .ddp { display:flex; }
-  .ddp button { text-align:left; padding:2px 4px; }
-  .ddr { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-  .ddr span { opacity:.8; }
+  .mgrp { position:relative; display:inline-block; }
+  .mgb { padding:0 2px; }
+  .mgrp.open .mgb { background:var(--bar-fg); color:var(--bar-bg); }
+  .mgp { display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:30; min-width:210px; flex-direction:column; gap:6px; padding:8px; background:var(--bar-bg); color:var(--bar-fg); border:1px solid currentColor; text-align:left; }
+  .mgrp.open .mgp { display:flex; }
+  .mgp button { text-align:left; padding:2px 4px; }
+  .mgr { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .mgr span { opacity:.8; }
   button, select { font-family:inherit; font-size:inherit; cursor:pointer; background:transparent; color:inherit; border:none; padding:0 2px; }
   button:hover, select:hover { background:var(--bar-fg); color:var(--bar-bg); }
   select { background:var(--bar-bg); border:1px solid currentColor; padding:0 3px; }
@@ -55,9 +55,9 @@
     #tools { display:none; width:100%; gap:8px 12px; padding:4px 0 6px; }
     body.menu-open #tools { display:flex; }
     #tools button, #tools select { padding:4px 6px; }
-    .dd { position:static; }
-    .ddp { left:8px; right:8px; top:100%; min-width:0; max-height:70vh; overflow-y:auto; }
-    .ddp button { padding:8px 6px; }
+    .mgrp { position:static; }
+    .mgp { left:8px; right:8px; top:100%; min-width:0; max-height:70vh; overflow-y:auto; }
+    .mgp button { padding:8px 6px; }
     #titlebar { justify-content:space-between; }
     #editor { font-size:18px; }
     #doc { padding:20px 16px 140px; }

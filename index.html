@@ -19,7 +19,7 @@
 <div id="titlebar">
   <div class="row"><span class="brand" title="Distraction Obfuscation System">𝗗.𝗢.𝗦</span><span id="docname" title="Documents">/untitled.txt</span><button id="backBtn" style="display:none"></button><button id="menuBtn">[Menu]</button></div>
   <div class="row" id="tools">
-    <div class="dd"><button class="ddb" title="Documents, import, backup">[File &#9662;]</button><div class="ddp">
+    <div class="mgrp"><button class="mgb" title="Documents, import, backup">[File &#9662;]</button><div class="mgp">
       <button id="newBtn" title="New document">[New document]</button>
       <button id="docsBtn" title="Switch between documents">[Documents]</button>
       <button id="openBtn" title="Import a text file as a new document">[Import text file]</button>
@@ -30,29 +30,29 @@
       <button id="syncBtn" title="Sync with your other device">[Sync now]</button>
       <button id="lockBtn" title="Lock journal, dreams and contacts (sets a PIN the first time)">[Privacy lock]</button>
     </div></div>
-    <div class="dd"><button class="ddb" title="Images, drop caps, notes">[Insert &#9662;]</button><div class="ddp">
+    <div class="mgrp"><button class="mgb" title="Images, drop caps, notes">[Insert &#9662;]</button><div class="mgp">
       <button id="imgBtn" title="Insert a monochrome pixel image at the cursor">[Image at cursor]</button>
-      <label class="ddr"><span>Image detail</span><select id="detail" title="Image detail (pixel width)"></select></label>
+      <label class="mgr"><span>Image detail</span><select id="detail" title="Image detail (pixel width)"></select></label>
       <button id="capBtn" title="Toggle a drop cap on the current paragraph (Ctrl+D)">[Drop cap ^D]</button>
-      <label class="ddr"><span>Cap style</span><select id="capstyle" title="Drop cap style"></select></label>
-      <label class="ddr"><span>Cap colour</span><select id="capcolour" title="Drop cap colour for the current paragraph"></select></label>
+      <label class="mgr"><span>Cap style</span><select id="capstyle" title="Drop cap style"></select></label>
+      <label class="mgr"><span>Cap colour</span><select id="capcolour" title="Drop cap colour for the current paragraph"></select></label>
       <button id="noteAddBtn" title="Quick note from the selected text">[Note from selection]</button>
     </div></div>
-    <div class="dd"><button class="ddb" title="Colours, mode, chapters, goal">[Format &#9662;]</button><div class="ddp">
-      <label class="ddr"><span>Colour selection</span><select id="wordcolour" title="Colour the selected words or letters"></select></label>
-      <label class="ddr"><span>Text colour</span><select id="textcolor" title="Overall text colour"></select></label>
-      <label class="ddr"><span>Mode</span><select id="mode" title="Writing mode"><option value="prose">/prose</option><option value="screenplay">/screenplay</option></select></label>
+    <div class="mgrp"><button class="mgb" title="Colours, mode, chapters, goal">[Format &#9662;]</button><div class="mgp">
+      <label class="mgr"><span>Colour selection</span><select id="wordcolour" title="Colour the selected words or letters"></select></label>
+      <label class="mgr"><span>Text colour</span><select id="textcolor" title="Overall text colour"></select></label>
+      <label class="mgr"><span>Mode</span><select id="mode" title="Writing mode"><option value="prose">/prose</option><option value="screenplay">/screenplay</option></select></label>
       <button id="navBtn" title="Chapters / scenes">[Chapters / scenes]</button>
       <button id="goalBtn" title="Word goal">[Word goal]</button>
     </div></div>
-    <div class="dd"><button class="ddb" title="Theme and screen settings">[View &#9662;]</button><div class="ddp">
-      <label class="ddr"><span>Theme</span><select id="theme" title="Colour scheme"></select></label>
+    <div class="mgrp"><button class="mgb" title="Theme and screen settings">[View &#9662;]</button><div class="mgp">
+      <label class="mgr"><span>Theme</span><select id="theme" title="Colour scheme"></select></label>
       <button class="keep" id="comfBtn" title="Comfort mode: typewriter scrolling, text size">[Comfort mode]</button>
       <div id="comfctl"><select id="fsize" title="Text size"></select><select id="lspace" title="Line spacing"></select></div>
       <button class="keep" id="crtBtn" title="CRT screen effect: off / scanlines / full">[CRT]</button>
       <button class="keep" id="bootBtn" title="DOS startup sequence on / off">[Boot: on]</button>
     </div></div>
-    <div class="dd"><button class="ddb" title="Journal, calendar, contacts">[Pages &#9662;]</button><div class="ddp">
+    <div class="mgrp"><button class="mgb" title="Journal, calendar, contacts">[Pages &#9662;]</button><div class="mgp">
       <button id="journalBtn" title="Open or start today's journal entry">[Journal: today]</button>
       <button id="dreamBtn" title="Open or start last night's dream entry">[Dream journal: today]</button>
       <button id="calBtn" title="Month calendar with journal days, events and birthdays">[Calendar]</button>
