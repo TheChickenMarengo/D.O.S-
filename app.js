@@ -1,7 +1,7 @@
 (function () {
   const $ = id => document.getElementById(id);
   const body = document.body, editor = $('editor'), root = document.documentElement, scroller = $('scroller');
-  const K = { idx:'dos-writer-index', snaps:'dos-writer-snaps-', body:'dos-writer-doc-', comf:'dos-writer-comfort', num:'dos-writer-numbered', lastbk:'dos-writer-lastbackup', fsize:'dos-writer-fsize', lspace:'dos-writer-lspace', ksound:'dos-writer-ksound', doc:'dos-writer-doc', name:'dos-writer-name', theme:'dos-writer-theme', mode:'dos-writer-mode', tc:'dos-writer-textcolor', imgs:'dos-writer-images', capstyle:'dos-writer-capstyle', detail:'dos-writer-detail', notes:'dos-writer-notes', crt:'dos-writer-crt', boot:'dos-writer-boot', events:'dos-writer-events', people:'dos-writer-people' };
+  const K = { idx:'dos-writer-index', snaps:'dos-writer-snaps-', body:'dos-writer-doc-', comf:'dos-writer-comfort', num:'dos-writer-numbered', lastbk:'dos-writer-lastbackup', fsize:'dos-writer-fsize', lspace:'dos-writer-lspace', ksound:'dos-writer-ksound', doc:'dos-writer-doc', name:'dos-writer-name', theme:'dos-writer-theme', mode:'dos-writer-mode', tc:'dos-writer-textcolor', imgs:'dos-writer-images', capstyle:'dos-writer-capstyle', detail:'dos-writer-detail', notes:'dos-writer-notes', crt:'dos-writer-crt', boot:'dos-writer-boot', events:'dos-writer-events', people:'dos-writer-people', recipes:'dos-writer-recipes' };
   let syncHook = null;
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { return false; } if (syncHook) syncHook(k); return true; }
   function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -870,7 +870,7 @@
 
   // ---------- overlays ----------
   function openOv(id) { document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show')); $(id).classList.add('show'); }
-  function closeOv(id) { $(id).classList.remove('show'); if (id === 'nedit') noteClosed(); if (id === 'cedit') contactClosed(); editor.focus(); restore(); }
+  function closeOv(id) { $(id).classList.remove('show'); if (id === 'nedit') noteClosed(); if (id === 'cedit') contactClosed(); if (id === 'redit') recipeClosed(); if (id === 'rcook') { wakeOff(); rCook = null; } editor.focus(); restore(); }
   document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeOv(o.id); }));
   let pendingConfirm = null;
   function confirmTwice(q) { if (pendingConfirm === q) { pendingConfirm = null; return true; } pendingConfirm = q; flash(q + ' Press again.'); setTimeout(() => { pendingConfirm = null; }, 3000); return false; }
@@ -958,7 +958,7 @@
       let sn = []; try { sn = JSON.parse(load(K.snaps + d.id) || '[]'); } catch (e) { sn = []; }
       return { id: d.id, name: d.name, journal: d.journal || null, goal: d.goal || null, s: d.id === lib.cur ? serialize() : (load(K.body + d.id) || ''), snaps: sn };
     });
-    return JSON.stringify({ app: 'dos-writer', v: 1, cur: lib.list.findIndex(d => d.id === lib.cur), docs, images, notes, events, contacts: people });
+    return JSON.stringify({ app: 'dos-writer', v: 1, cur: lib.list.findIndex(d => d.id === lib.cur), docs, images, notes, events, contacts: people, recipes });
   }
   function openBackup() {
     const t = buildBackup();
@@ -991,6 +991,7 @@
     saveNotes();
     if (data.events && Array.isArray(data.events.list)) { events = { list: data.events.list, next: data.events.next || (data.events.list.length + 1) }; saveEvents(); }
     if (data.contacts && Array.isArray(data.contacts.list)) { people = { list: data.contacts.list, next: data.contacts.next || (data.contacts.list.length + 1) }; savePeople(); }
+    if (data.recipes && Array.isArray(data.recipes.list)) { recipes = { list: data.recipes.list, next: data.recipes.next || (data.recipes.list.length + 1) }; saveRecipes(); }
     saveLib(); closeOv('bk'); enterDoc(); flash('BACKUP RESTORED');
   };
 
@@ -1486,13 +1487,13 @@
     const n = newNote(t, lib.cur), rf = refHere(); if (rf) n.ref = rf; saveNotes();
     if (t) flash('NOTE ADDED'); else { if (body.classList.contains('notes')) renderNotes(); openNote(n.id); }
   }
-  const VIEWS = ['notes', 'cal', 'contacts'];
+  const VIEWS = ['notes', 'cal', 'contacts', 'recipes'];
   const curView = () => VIEWS.find(v => body.classList.contains(v)) || 'write';
   function setView(v) {
     const cur = curView(); if (v === cur) return;
     if (cur === 'write') { commit(); persist(); body.classList.remove('focus'); }
     VIEWS.forEach(x => body.classList.toggle(x, x === v));
-    if (v === 'notes') renderNotes(); else if (v === 'cal') renderCal(); else if (v === 'contacts') renderPeople(); else editor.focus();
+    if (v === 'notes') renderNotes(); else if (v === 'cal') renderCal(); else if (v === 'contacts') renderPeople(); else if (v === 'recipes') renderRecipes(); else editor.focus();
     $('notesBtn').textContent = v === 'notes' ? '[Writing]' : '[Notes]';
     lockCheck();
   }
@@ -1768,6 +1769,133 @@
   $('cphotoBtn').onclick = () => { if (!editingC) return; const c = editingC; chooseImage(f => addNoteImage(f, i => { c.img = i; savePeople(); if (editingC === c) drawContactPhoto(c); })); };
   $('cphotoDel').onclick = () => { if (!editingC) return; editingC.img = null; savePeople(); drawContactPhoto(editingC); };
   $('cdone').onclick = () => closeOv('cedit');
+  // ---------- recipes ----------
+  let recipes = { list: [], next: 1 };
+  try { const o = JSON.parse(load(K.recipes) || 'null'); if (o && Array.isArray(o.list)) recipes = { list: o.list, next: o.next || (o.list.length + 1) }; } catch (e) { /* ignore */ }
+  let rcT, editingR = null, rFavOnly = false, rCook = null;
+  function saveRecipes() { clearTimeout(rcT); if (!store(K.recipes, JSON.stringify(recipes))) flash('RECIPES NOT SAVED - STORAGE FULL?'); }
+  function saveRecipesLater() { clearTimeout(rcT); rcT = setTimeout(saveRecipes, 400); }
+  const rTags = r => String(r.tags || '').split(',').map(s => s.trim()).filter(Boolean);
+  function renderRecipes() {
+    const q = $('rsearch').value.trim().toLowerCase(), tagSel = $('rtag'), cur = tagSel.value, g = $('rgrid'); g.innerHTML = '';
+    const all = Array.from(new Set([].concat(...recipes.list.map(rTags).map(a => a.map(t => t.toLowerCase()))))).sort();
+    tagSel.innerHTML = ''; const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'all tags'; tagSel.appendChild(o0);
+    all.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = '#' + t; tagSel.appendChild(o); });
+    tagSel.value = all.indexOf(cur) >= 0 ? cur : '';
+    const hay = r => [r.title, r.tags, r.ing, r.steps, r.notes, r.source].join(' ').toLowerCase();
+    const list = recipes.list.filter(r => (!q || hay(r).includes(q)) && (!tagSel.value || rTags(r).some(t => t.toLowerCase() === tagSel.value)) && (!rFavOnly || r.fav))
+      .sort((a, b) => (a.title || '~').toLowerCase().localeCompare((b.title || '~').toLowerCase()));
+    $('rcount').textContent = list.length + (list.length === recipes.list.length ? '' : '/' + recipes.list.length) + ' recipes';
+    $('rfavf').textContent = rFavOnly ? '[* favourites: on]' : '[* favourites]';
+    if (!list.length) { const e = document.createElement('div'); e.className = 'nempty'; e.textContent = recipes.list.length ? 'No recipes match.' : 'No recipes yet. Tap [+ Recipe].'; g.appendChild(e); return; }
+    list.forEach(r => {
+      const card = document.createElement('div'); card.className = 'pcard rcard';
+      if (r.img != null && images[r.img]) { const cv = document.createElement('canvas'); cv.className = 'cph'; paintNoteImg(cv, r.img); card.appendChild(cv); }
+      else { const ph = document.createElement('div'); ph.className = 'cph'; ph.textContent = ((r.title || '?').trim()[0] || '?').toUpperCase(); card.appendChild(ph); }
+      const info = document.createElement('div'); info.className = 'pinfo';
+      const line = (cls, t) => { if (!t) return; const d = document.createElement('div'); d.className = cls; d.textContent = t; info.appendChild(d); };
+      line('pn', (r.fav ? '* ' : '') + (r.title || '(untitled recipe)'));
+      line('ps', [r.serves ? 'Serves ' + r.serves : '', r.prep ? 'Prep ' + r.prep : '', r.cook ? 'Cook ' + r.cook : ''].filter(Boolean).join('  ·  '));
+      line('ps', rTags(r).map(t => '#' + t).join(' '));
+      const n = String(r.ing || '').split('\n').filter(s => s.trim()).length; line('ps', n ? n + ' ingredients' : '');
+      card.appendChild(info); card.onclick = () => openRecipe(r); g.appendChild(card);
+    });
+  }
+  const RF = { rtitle: 'title', rserves: 'serves', rprep: 'prep', rcooktime: 'cook', rtags: 'tags', rsource: 'source', ring: 'ing', rsteps: 'steps', rnotes: 'notes' };
+  Object.keys(RF).forEach(id => $(id).addEventListener('input', () => { if (editingR) { editingR[RF[id]] = id === 'rserves' ? (parseFloat($(id).value) || '') : $(id).value; editingR.t = Date.now(); saveRecipesLater(); } }));
+  function drawRecipePhoto(r) {
+    const cv = $('rphoto');
+    if (r.img != null && images[r.img]) paintNoteImg(cv, r.img); else { cv.width = 8; cv.height = 8; cv.getContext('2d').clearRect(0, 0, 8, 8); }
+    $('rphotoBtn').textContent = r.img != null ? '[Change photo]' : '[Add photo]'; $('rphotoDel').style.display = r.img != null ? '' : 'none';
+    $('rfav').textContent = r.fav ? '[* Favourite: yes]' : '[* Favourite]';
+  }
+  function openRecipe(r) {
+    editingR = r; Object.keys(RF).forEach(id => { $(id).value = r[RF[id]] == null ? '' : r[RF[id]]; });
+    drawRecipePhoto(r); openOv('redit'); if (!r.title && !r.ing) $('rtitle').focus();
+  }
+  function recipeClosed() {
+    const r = editingR; editingR = null; if (!r) return;
+    const empty = !(r.title || r.ing || r.steps || r.notes || r.img != null || r.source);
+    if (empty) recipes.list = recipes.list.filter(x => x !== r);
+    saveRecipes(); if (curView() === 'recipes') renderRecipes();
+  }
+  $('rnew').onclick = () => { const r = { id: recipes.next++, title: '', serves: '', prep: '', cook: '', tags: '', source: '', ing: '', steps: '', notes: '', img: null, fav: false, t: Date.now() }; recipes.list.push(r); openRecipe(r); };
+  $('rphotoBtn').onclick = () => { if (!editingR) return; const r = editingR; chooseImage(f => addNoteImage(f, i => { r.img = i; saveRecipes(); if (editingR === r) drawRecipePhoto(r); })); };
+  $('rphotoDel').onclick = () => { if (!editingR) return; editingR.img = null; saveRecipes(); drawRecipePhoto(editingR); };
+  $('rfav').onclick = () => { if (!editingR) return; editingR.fav = !editingR.fav; saveRecipes(); drawRecipePhoto(editingR); };
+  $('rdone').onclick = () => closeOv('redit');
+  $('rdel').onclick = () => {
+    if (!editingR || !confirmTwice('Delete this recipe?')) return;
+    const r = editingR; editingR = null; recipes.list = recipes.list.filter(x => x !== r); saveRecipes(); closeOv('redit'); flash('RECIPE DELETED');
+  };
+  $('rclose').onclick = () => setView('write');
+  $('rsearch').addEventListener('input', renderRecipes); $('rtag').addEventListener('change', renderRecipes);
+  $('rfavf').onclick = () => { rFavOnly = !rFavOnly; renderRecipes(); };
+  $('recipeBtn').onclick = () => setView('recipes');
+  $('rcopy').onclick = async () => { if (!editingR) return; try { await navigator.clipboard.writeText(recipeText(editingR)); flash('RECIPE COPIED'); } catch (e) { flash('COPY FAILED'); } };
+  function recipeText(r) {
+    return [r.title || 'Recipe', [r.serves ? 'Serves ' + r.serves : '', r.prep ? 'Prep ' + r.prep : '', r.cook ? 'Cook ' + r.cook : ''].filter(Boolean).join(' | '), '', 'INGREDIENTS', r.ing || '', '', 'METHOD', String(r.steps || '').split('\n').filter(s => s.trim()).map((s, i) => (i + 1) + '. ' + s.replace(/^\s*\d+[.)]\s*/, '')).join('\n'), r.notes ? '\nNOTES\n' + r.notes : ''].join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  $('rinsert').onclick = () => { if (!editingR) return; const t = recipeText(editingR); closeOv('redit'); setView('write'); editor.focus(); document.execCommand('insertText', false, t); flash('RECIPE INSERTED AT CURSOR'); };
+
+  // cook mode: scale servings, tick off ingredients and steps, keep the screen awake
+  const FR = { '½': .5, '¼': .25, '¾': .75, '⅓': 1 / 3, '⅔': 2 / 3, '⅛': .125 };
+  function qtyVal(s) {
+    s = s.trim(); if (FR[s] != null) return FR[s];
+    let m = s.match(/^(\d+)\s+(\d+)\/(\d+)$/); if (m) return +m[1] + m[2] / m[3];
+    m = s.match(/^(\d+)\/(\d+)$/); if (m) return m[1] / m[2];
+    m = s.match(/^(\d+)\s*([½¼¾⅓⅔⅛])$/); if (m) return +m[1] + FR[m[2]];
+    return parseFloat(s);
+  }
+  function qtyStr(v) {
+    const w = Math.floor(v + 1e-9), f = v - w, F = [[0, ''], [1 / 8, '1/8'], [1 / 4, '1/4'], [1 / 3, '1/3'], [3 / 8, '3/8'], [1 / 2, '1/2'], [5 / 8, '5/8'], [2 / 3, '2/3'], [3 / 4, '3/4'], [7 / 8, '7/8'], [1, '']];
+    if (v >= 20) return String(Math.round(v * 10) / 10).replace(/\.0$/, '');
+    let best = F[0], d = 9; F.forEach(x => { if (Math.abs(x[0] - f) < d) { d = Math.abs(x[0] - f); best = x; } });
+    if (d > 0.04) return String(Math.round(v * 100) / 100);
+    const ww = best[0] === 1 ? w + 1 : w; return (ww ? ww : '') + (ww && best[1] ? ' ' : '') + best[1] || '0';
+  }
+  const QTY = /^(\s*)(\d+\s+\d+\/\d+|\d+\s*[½¼¾⅓⅔⅛]|\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅓⅔⅛])(\s*[-–]\s*(?:\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?))?/;
+  function scaleLine(line, k) {
+    if (k === 1) return line;
+    const m = line.match(QTY); if (!m) return line;
+    const a = qtyVal(m[2]); if (!isFinite(a)) return line;
+    let out = m[1] + qtyStr(a * k);
+    if (m[3]) { const b = qtyVal(m[3].replace(/^\s*[-–]\s*/, '')); if (isFinite(b)) out += '-' + qtyStr(b * k); }
+    return out + line.slice(m[0].length);
+  }
+  let wakeL = null;
+  async function wakeOn() { try { if (navigator.wakeLock) wakeL = await navigator.wakeLock.request('screen'); } catch (e) { wakeL = null; } }
+  function wakeOff() { try { if (wakeL) wakeL.release(); } catch (e) { /* ignore */ } wakeL = null; }
+  function drawCook() {
+    const r = rCook.r, k = rCook.serves && r.serves ? rCook.serves / r.serves : 1, L = $('rcbody'); L.innerHTML = '';
+    $('rctitle').textContent = r.title || 'Recipe';
+    $('rcserves').textContent = r.serves ? rCook.serves : '-'; $('rcscale').style.display = r.serves ? '' : 'none';
+    $('rcmeta').textContent = [r.prep ? 'Prep ' + r.prep : '', r.cook ? 'Cook ' + r.cook : ''].filter(Boolean).join('  ·  ');
+    const sec = t => { const h = document.createElement('div'); h.className = 'rch'; h.textContent = t; L.appendChild(h); };
+    sec('INGREDIENTS');
+    String(r.ing || '').split('\n').forEach((raw, i) => {
+      if (!raw.trim()) return;
+      const hd = /^#\s*/.test(raw) || /:\s*$/.test(raw.trim()); const row = document.createElement('div');
+      if (hd) { row.className = 'rch sub'; row.textContent = raw.replace(/^#\s*/, '').replace(/:\s*$/, ''); L.appendChild(row); return; }
+      row.className = 'rci' + (rCook.done['i' + i] ? ' done' : ''); row.textContent = '[' + (rCook.done['i' + i] ? 'x' : ' ') + '] ' + scaleLine(raw, k);
+      row.onclick = () => { rCook.done['i' + i] = !rCook.done['i' + i]; drawCook(); }; L.appendChild(row);
+    });
+    const steps = String(r.steps || '').split('\n').filter(s => s.trim());
+    if (steps.length) { sec('METHOD'); steps.forEach((s, i) => {
+      const row = document.createElement('div'); row.className = 'rci rcs' + (rCook.done['s' + i] ? ' done' : ''); row.textContent = (i + 1) + '. ' + s.replace(/^\s*\d+[.)]\s*/, '');
+      row.onclick = () => { rCook.done['s' + i] = !rCook.done['s' + i]; drawCook(); }; L.appendChild(row); }); }
+    if (r.notes) { sec('NOTES'); const n = document.createElement('div'); n.className = 'rcn'; n.textContent = r.notes; L.appendChild(n); }
+  }
+  function openCook() {
+    if (!editingR) return; const r = editingR; closeOv('redit');
+    rCook = { r, serves: +r.serves || 0, done: {} }; drawCook(); openOv('rcook'); wakeOn();
+  }
+  $('rcookBtn').onclick = openCook;
+  $('rcminus').onclick = () => { if (rCook && rCook.serves > 1) { rCook.serves--; drawCook(); } };
+  $('rcplus').onclick = () => { if (rCook) { rCook.serves++; drawCook(); } };
+  $('rcreset').onclick = () => { if (rCook) { rCook.serves = +rCook.r.serves || 0; rCook.done = {}; drawCook(); } };
+  $('rcclose').onclick = () => closeOv('rcook');
+
   let photoId = null;
   function showPhoto(id) { if (!images[id]) return; photoId = id; paintNoteImg($('pvcanvas'), id); $('photoview').classList.add('show'); }
   const hidePhoto = () => $('photoview').classList.remove('show');
@@ -1930,6 +2058,7 @@
     ['notes', 'Notes board', ['board', 'pinboard'], () => setView('notes')],
     ['calendar', 'Calendar', ['events', 'cal'], () => $('calBtn').click()],
     ['contacts', 'Contacts', ['people'], () => setView('contacts')],
+    ['recipes', 'Recipes', ['recipe', 'cooking', 'food'], () => setView('recipes')],
     ['docs', 'Switch document', ['documents', 'files'], () => openDocs()],
     ['nav', 'Chapters and scenes', ['contents'], () => openNav()],
     ['find', 'Find and replace', ['replace'], () => openFind()],
@@ -2027,6 +2156,7 @@
       return c; }) });
     it.events = JSON.stringify(events);
     it.people = JSON.stringify({ next: people.next, list: people.list.map(p => { const c = Object.assign({}, p); if (c.img != null) { c.imgh = ih(c.img); delete c.img; } return c; }) });
+    it.recipes = JSON.stringify({ next: recipes.next, list: recipes.list.map(p => { const c = Object.assign({}, p); if (c.img != null) { c.imgh = ih(c.img); delete c.img; } return c; }) });
     images.forEach((im, i) => { const h = ih(i); if (h) it['img_' + h] = JSON.stringify(im); });
     return it;
   }
@@ -2080,7 +2210,9 @@
         return c; }), next: o.next || (o.list.length + 1), view: o.view === 'board' ? 'board' : 'grid' };
       fl.notes = true;
     } else if (k === 'events') { events = { list: o.list || [], next: o.next || ((o.list || []).length + 1) }; fl.events = true; }
-    else if (k === 'people') {
+    else if (k === 'recipes') {
+      recipes = { list: (o.list || []).map(p => { const c = Object.assign({}, p); if ('imgh' in c) { const i = c.imgh ? imgIdx(c.imgh) : -1; delete c.imgh; c.img = i >= 0 ? i : null; } return c; }), next: o.next || ((o.list || []).length + 1) }; fl.recipes = true;
+    } else if (k === 'people') {
       people = { list: (o.list || []).map(p => { const c = Object.assign({}, p); if ('imgh' in c) { const i = c.imgh ? imgIdx(c.imgh) : -1; delete c.imgh; c.img = i >= 0 ? i : null; } return c; }), next: o.next || ((o.list || []).length + 1) }; fl.people = true;
     }
   }
@@ -2106,8 +2238,8 @@
       const snap = await SY.col.where('k', '==', 'h').get();
       const heads = {}; snap.docs.forEach(d => { const v = d.data(); if (v && v.key) heads[v.key] = v; });
       SY.apply = true; const loc = localItems(); SY.apply = false; const base = SY.st.base;
-      const fresh = !Object.keys(base).length && lib.list.every(d => !(load(K.body + d.id) || '').trim() || d.id === lib.cur && !serialize().trim()) && !notes.list.length && !events.list.length && !people.list.length;
-      if (fresh) Object.keys(loc).forEach(k => { if (k.indexOf('d_') === 0 || k === 'notes' || k === 'events' || k === 'people') { const o = JSON.parse(loc[k]); if ((o.s != null && !o.s) || (o.list && !o.list.length)) delete loc[k]; } });
+      const fresh = !Object.keys(base).length && lib.list.every(d => !(load(K.body + d.id) || '').trim() || d.id === lib.cur && !serialize().trim()) && !notes.list.length && !events.list.length && !people.list.length && !recipes.list.length;
+      if (fresh) Object.keys(loc).forEach(k => { if (k.indexOf('d_') === 0 || k === 'notes' || k === 'events' || k === 'people' || k === 'recipes') { const o = JSON.parse(loc[k]); if ((o.s != null && !o.s) || (o.list && !o.list.length)) delete loc[k]; } });
       const keys = new Set(Object.keys(loc).concat(Object.keys(heads), Object.keys(base)));
       const L0 = {}; keys.forEach(k => { L0[k] = loc[k] != null ? hashStr(loc[k]) : null; });
       const order = Array.from(keys).sort((a, b) => (a.indexOf('img_') === 0 ? 0 : a.indexOf('d_') === 0 ? 1 : 2) - (b.indexOf('img_') === 0 ? 0 : b.indexOf('d_') === 0 ? 1 : 2));
@@ -2119,7 +2251,7 @@
         if (!act) { if (L === R) { if (L == null) delete base[k]; else base[k] = L; } continue; }
         if (act === 'conflict') {
           conflicts++;
-          if (k === 'notes' || k === 'events' || k === 'people') {
+          if (k === 'notes' || k === 'events' || k === 'people' || k === 'recipes') {
             const rs = await syRead(k, head); if (rs == null) continue;
             const merged = JSON.stringify(mergeColl(JSON.parse(loc[k]), JSON.parse(rs)));
             applyItem(k, merged, fl); await syWrite(k, merged, head.n); base[k] = hashStr(merged); pushed++; pulled++; continue;
@@ -2144,9 +2276,11 @@
       if (fl.notes) store(K.notes, JSON.stringify(notes));
       if (fl.events) store(K.events, JSON.stringify(events));
       if (fl.people) store(K.people, JSON.stringify(people));
+      if (fl.recipes) store(K.recipes, JSON.stringify(recipes));
       SY.apply = false; sySave(); SY.last = Date.now();
       if (fl.cur || fl.img) { enterDoc(); }
-      const v = curView(); if (!$('nedit').classList.contains('show') && !$('cedit').classList.contains('show')) { if (v === 'notes' && (fl.notes || fl.img)) renderNotes(); else if (v === 'cal' && (fl.events || fl.lib)) renderCal(); else if (v === 'contacts' && (fl.people || fl.img)) renderPeople(); }
+      const v = curView(); if (!$('nedit').classList.contains('show') && !$('cedit').classList.contains('show') && !$('redit').classList.contains('show')) {
+        if (curView() === 'recipes' && (fl.recipes || fl.img)) renderRecipes(); if (v === 'notes' && (fl.notes || fl.img)) renderNotes(); else if (v === 'cal' && (fl.events || fl.lib)) renderCal(); else if (v === 'contacts' && (fl.people || fl.img)) renderPeople(); }
       const t = new Date(); syStatus('ok ' + p2(t.getHours()) + ':' + p2(t.getMinutes()));
       if (manual) flash(pushed || pulled ? 'SYNCED: ' + pulled + ' IN, ' + pushed + ' OUT' + (conflicts ? ', ' + conflicts + ' MERGED' : '') : 'ALREADY UP TO DATE');
       else if (pulled) flash('SYNCED ' + pulled + ' CHANGE' + (pulled > 1 ? 'S' : '') + ' FROM YOUR OTHER DEVICE');
@@ -2159,7 +2293,7 @@
     if (SY.again) { SY.again = false; syncSoon(); }
   }
   function syncSoon() { if (!SY.on || !SY.ready) return; clearTimeout(SY.t); SY.t = setTimeout(() => syncRun(), 12000); }
-  syncHook = k => { if (SY.apply) return; if (k === K.idx || k === K.notes || k === K.events || k === K.people || k === K.imgs || k.indexOf(K.body) === 0) { SY.lastChange = Date.now(); syncSoon(); } };
+  syncHook = k => { if (SY.apply) return; if (k === K.idx || k === K.notes || k === K.events || k === K.people || k === K.recipes || k === K.imgs || k.indexOf(K.body) === 0) { SY.lastChange = Date.now(); syncSoon(); } };
   function setSync(on) { SY.on = on; store('dos-writer-sync-on', on ? '1' : '0'); if (!SY.ready) { openGh(); return; } if (on) { syStatus('on'); syncRun(true); } else { clearTimeout(SY.t); syStatus('off'); flash('SYNC OFF'); } }
   // ---------- GitHub Gist sync (used when the artifact database is not available, e.g. the installed web app) ----------
   const GHK = 'dos-writer-gh';
@@ -2241,7 +2375,7 @@
   $('syncst').onclick = () => { if (!SY.ready) openGh(); else if (!SY.on) setSync(true); else syncRun(true); };
 
   // ---------- global search ----------
-  const GSKIND = { doc: 'DOC', journal: 'JOURNAL', dream: 'DREAM', note: 'NOTE', contact: 'CONTACT', event: 'EVENT' };
+  const GSKIND = { doc: 'DOC', journal: 'JOURNAL', dream: 'DREAM', note: 'NOTE', contact: 'CONTACT', event: 'EVENT', recipe: 'RECIPE' };
   let gsT = null;
   function gsSnip(text, i, qlen) { const a = Math.max(0, i - 28), b = Math.min(text.length, i + qlen + 44); return (a ? '...' : '') + text.slice(a, b).replace(/\s+/g, ' ') + (b < text.length ? '...' : ''); }
   function gsFind(q) {
@@ -2259,6 +2393,10 @@
     });
     notes.list.forEach(n => { const t = n.text || '', i = t.toLowerCase().indexOf(q); if (i >= 0) out.push({ kind: 'note', title: 'Note', text: gsSnip(t, i, q.length), go: () => { setView('notes'); openNote(n.id); } }); });
     events.list.forEach(e => { const t = e.t || ''; if (t.toLowerCase().indexOf(q) >= 0 || (e.d || '').indexOf(q) >= 0) out.push({ kind: 'event', title: e.d ? dateLabel(e.d) : 'Event', text: t, go: () => { calSel = e.d; calM = parseYmd(e.d); calM.setDate(1); setView('cal'); renderCal(); } }); });
+    recipes.list.forEach(r => {
+      const hit = [r.title, r.tags, r.ing, r.steps, r.notes, r.source].filter(Boolean).find(p => p.toLowerCase().indexOf(q) >= 0);
+      if (hit) out.push({ kind: 'recipe', title: r.title || 'Recipe', text: gsSnip(hit, hit.toLowerCase().indexOf(q), q.length), go: () => { setView('recipes'); openRecipe(r); } });
+    });
     if (!locked) people.list.forEach(c => {
       const parts = [c.name, c.nick, c.phone, c.email, c.addr, c.notes, c.bday].concat((c.fields || []).map(f => (f[0] || '') + ': ' + (f[1] || ''))).filter(Boolean), hit = parts.find(p => p.toLowerCase().indexOf(q) >= 0);
       if (hit) out.push({ kind: 'contact', title: c.name || c.nick || 'Contact', text: gsSnip(hit, hit.toLowerCase().indexOf(q), q.length), go: () => { setView('contacts'); openContact(c); } });

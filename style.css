@@ -179,8 +179,8 @@
   .box .sw.st { width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; }
   .box .sw.st canvas { width:24px; height:24px; image-rendering:pixelated; }
   .view { display:none; flex:1; min-height:0; flex-direction:column; }
-  body.cal #calview, body.contacts #peopleview { display:flex; }
-  body.cal #scroller, body.contacts #scroller { display:none; }
+  body.cal #calview, body.contacts #peopleview, body.recipes #recipeview { display:flex; }
+  body.cal #scroller, body.contacts #scroller, body.recipes #scroller { display:none; }
   .vbar { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--fg); font-family:"VT323",monospace; font-size:20px; }
   .vbar button, #calday button { border:1px solid var(--accent); color:var(--accent); background:transparent; padding:2px 8px; font-family:"VT323",monospace; font-size:19px; }
   .vbar button:hover, #calday button:hover { background:var(--accent); color:var(--bg); }
@@ -248,3 +248,14 @@
 #lock .lkb { margin-top:8px; display:flex; gap:14px; justify-content:center; }
 #ghtok { width:100%; box-sizing:border-box; background:var(--bg); color:var(--fg); border:1px solid var(--fg); font:inherit; padding:6px 8px; margin:8px 0; }
 #ghmsg { min-height:1.4em; }
+
+#rgrid { column-width:290px; column-gap:14px; }
+#rgrid .nempty { opacity:.6; padding:20px; column-span:all; }
+#rphoto { width:96px; height:96px; image-rendering:pixelated; border:1px solid var(--fg); object-fit:cover; }
+#rcbody { margin-top:8px; max-height:58vh; overflow-y:auto; }
+.rch { margin:12px 0 4px; opacity:.85; letter-spacing:.05em; border-bottom:1px dotted var(--fg); }
+.rch.sub { opacity:1; font-weight:700; border:none; margin:8px 0 2px; }
+.rci { padding:7px 4px; cursor:pointer; line-height:1.4; font-size:18px; }
+.rci.done { opacity:.4; text-decoration:line-through; }
+.rcn { white-space:pre-wrap; opacity:.85; }
+#rcserves { min-width:2ch; text-align:center; font-size:22px; }

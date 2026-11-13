@@ -57,6 +57,7 @@
       <button id="dreamBtn" title="Open or start last night's dream entry">[Dream journal: today]</button>
       <button id="calBtn" title="Month calendar with journal days, events and birthdays">[Calendar]</button>
       <button id="peopleBtn" title="Contacts with photos">[Contacts]</button>
+      <button id="recipeBtn" title="Recipes: ingredients, method, photo, cook mode">[Recipes]</button>
     </div></div>
     <span class="sep">|</span>
     <button id="notesBtn" title="Notes board (ideas)">[Notes]</button>
@@ -84,6 +85,11 @@
 <div id="peopleview" class="view">
   <div class="vbar"><button id="pnew">[+ Contact]</button><input type="text" id="psearch" placeholder="search contacts" autocomplete="off"><span id="pcount"></span><button id="pclose">[Back to writing]</button></div>
   <div class="vscroll"><div id="pgrid"></div></div>
+</div>
+
+<div id="recipeview" class="view">
+  <div class="vbar"><button id="rnew">[+ Recipe]</button><input type="text" id="rsearch" placeholder="search recipes" autocomplete="off"><select id="rtag" title="Filter by tag"></select><button id="rfavf">[* favourites]</button><span id="rcount"></span><button id="rclose">[Back to writing]</button></div>
+  <div class="vscroll"><div id="rgrid"></div></div>
 </div>
 
 <div id="notesview">
@@ -140,6 +146,25 @@
 <div class="row2"><button id="cfadd">[+ Custom field]</button></div>
 <div class="row2"><button id="cdel">[Delete]</button><button id="cdone">[Done]</button></div></div></div>
 
+<div id="redit" class="overlay"><div class="box plain"><h3>/recipe</h3>
+<div class="row2" style="margin-top:0"><canvas id="rphoto" width="8" height="8"></canvas><div style="display:flex;flex-direction:column;gap:6px"><button id="rphotoBtn">[Add photo]</button><button id="rphotoDel">[Remove photo]</button><button id="rfav">[* Favourite]</button></div></div>
+<div class="frm">
+<label>Title<input type="text" id="rtitle" autocomplete="off"></label>
+<div class="row2" style="margin:0"><label style="flex:1">Serves<input type="number" id="rserves" min="1" step="1" inputmode="numeric"></label><label style="flex:1">Prep time<input type="text" id="rprep" placeholder="15 min" autocomplete="off"></label><label style="flex:1">Cook time<input type="text" id="rcooktime" placeholder="1 hr" autocomplete="off"></label></div>
+<label>Tags (comma separated)<input type="text" id="rtags" placeholder="dinner, vegetarian, quick" autocomplete="off"></label>
+<label>Source / link<input type="text" id="rsource" autocomplete="off"></label>
+<label>Ingredients (one per line, start with a quantity so it can scale; end a line with a colon for a heading)<textarea id="ring" rows="8" spellcheck="false" placeholder="200 g flour&#10;1/2 cup sugar&#10;3 eggs"></textarea></label>
+<label>Method (one step per line)<textarea id="rsteps" rows="8"></textarea></label>
+<label>Notes<textarea id="rnotes" rows="3"></textarea></label>
+</div>
+<div class="row2"><button id="rcookBtn">[Cook mode]</button><button id="rcopy">[Copy]</button><button id="rinsert">[Insert in document]</button></div>
+<div class="row2"><button id="rdel">[Delete]</button><button id="rdone">[Done]</button></div></div></div>
+
+<div id="rcook" class="overlay"><div class="box plain"><h3 id="rctitle"></h3><div id="rcmeta" style="opacity:.8"></div>
+<div id="rcscale" class="row2"><span>Serves</span><button id="rcminus">[-]</button><b id="rcserves"></b><button id="rcplus">[+]</button></div>
+<div id="rcbody"></div>
+<div class="row2"><button id="rcreset">[Reset]</button><button id="rcclose">[Close]</button></div></div></div>
+
 <div id="photoview" class="overlay"><div class="box plain" style="text-align:center"><canvas id="pvcanvas" width="8" height="8" style="display:block;width:100%;height:auto;image-rendering:pixelated;border:1px solid var(--fg);cursor:pointer"></canvas><div class="row2" style="justify-content:center"><button id="pvsave">[Save image]</button><button id="pvclose">[Close]</button></div></div></div>
 
 <div id="imgsrc" class="overlay"><div class="box plain"><h3>/add image</h3><div class="row2"><button id="imgcam">[Take photo]</button><button id="imglib">[Choose from library]</button><button id="imgcancel">[Cancel]</button></div></div></div>
@@ -149,6 +174,6 @@
 <div id="slash"></div>
 
 <script src="app.js"></script>
-<script>if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(function () {});</script>
+<script>if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});</script>
 </body>
 </html>
