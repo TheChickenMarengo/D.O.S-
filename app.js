@@ -2140,10 +2140,11 @@
   if (!SY.st || typeof SY.st !== 'object') SY.st = {};
   ['base', 'lt', 'lh'].forEach(k => { if (!SY.st[k]) SY.st[k] = {}; });
   if (!SY.st.dev) SY.st.dev = Math.random().toString(36).slice(2, 8);
+  const BUILD = 'b12';
   const SYCH = 40000, syCh = () => (SY.col && SY.col.ch) || SYCH;
   function hashStr(s) { let h = 5381 | 0; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + '.' + s.length; }
   function sySave() { store(SY.key, JSON.stringify(SY.st)); }
-  function syStatus(t) { const el = $('syncst'); if (!el) return; el.style.display = SY.ready || t ? '' : 'none'; el.textContent = '[sync: ' + t + ']'; }
+  function syStatus(t) { const el = $('syncst'); if (!el) return; el.style.display = SY.ready || t ? '' : 'none'; el.textContent = '[sync: ' + t + ' · ' + BUILD + ']'; }
   const ihc = new WeakMap();
   function ih(i) { const im = images[i]; if (!im || !im.src) return null; let h = ihc.get(im); if (!h) { h = hashStr(im.src); ihc.set(im, h); } return h; }
   const toH = s => s.replace(/\[img:(\d+)\]/g, (m, n) => { const h = ih(+n); return h ? '[img:~' + h + ']' : m; });
