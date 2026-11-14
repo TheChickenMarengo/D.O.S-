@@ -2048,7 +2048,7 @@
     ['chapter', 'Next chapter heading', ['heading'], () => insertAtCaret('Chapter ' + (headings().filter(h => /^chapter\s/i.test(h.line)).length + 1))],
     ['break', 'Scene break  * * *', ['scene', 'divider', 'rule'], b => { insertAtCaret('* * *'); const nb = createBlock(''); b.after(nb); setCaret(nb, 0); commit(); refresh(); }],
     ['heading', 'Make this line a heading', ['h', 'title'], () => insertAtCaret('## ')],
-    ['cap', 'Drop cap on / off', ['dropcap'], () => toggleCap()],
+    ['cap', 'Drop cap (next letter you type)', ['dropcap'], b => { if (b && !isImg(b) && !txtOf(b).textContent.trim() && !b.classList.contains('dc')) { capArm = b; flash('DROP CAP: TYPE THE FIRST LETTER'); } else toggleCap(); }],
     ['image', 'Insert an image', ['photo', 'picture', 'camera'], () => pickImage()],
     ['note', 'Quick note about this spot', ['idea'], () => quickNote()],
     ['words', 'Show the word count', ['count'], () => flash(countWords().toLocaleString() + ' WORDS')],
@@ -2075,6 +2075,19 @@
     ['screenplay', 'Screenplay mode', ['script'], () => setMode('screenplay')],
     ['help', 'Help', ['?'], () => toggleHelp(true)]
   ];
+  let capArm = null;
+  function capCheck(e) {
+    if (!capArm) return; const b = curBlock();
+    if (b !== capArm || !b.isConnected) { capArm = null; return; }
+    if (e && e.isComposing) return;
+    const tx = txtOf(b); if (tx.textContent !== tx.textContent.replace(/^\s+/, '')) { tx.textContent = tx.textContent.replace(/^\s+/, ''); }
+    if (!tx.textContent) return;
+    capArm = null;
+    if (dropBlock(b)) { setCaret(b, 0); commit(); refresh(); }
+  }
+  editor.addEventListener('input', capCheck); editor.addEventListener('compositionend', () => setTimeout(capCheck, 0));
+  editor.addEventListener('pointerdown', () => { capArm = null; });
+  editor.addEventListener('keydown', e => { if (capArm && ['Enter', 'Escape', 'ArrowUp', 'ArrowDown'].includes(e.key)) capArm = null; });
   const slash = $('slash'); let slOpen = false, slItems = [], slIdx = 0;
   function slashClose() { if (!slOpen) return; slOpen = false; slash.classList.remove('show'); }
   function slashDraw() {
