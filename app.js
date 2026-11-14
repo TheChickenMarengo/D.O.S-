@@ -2136,6 +2136,25 @@
   const toH = s => s.replace(/\[img:(\d+)\]/g, (m, n) => { const h = ih(+n); return h ? '[img:~' + h + ']' : m; });
   const imgIdx = h => { for (let i = 0; i < images.length; i++) if (ih(i) === h) return i; return -1; };
   const fromH = s => s.replace(/\[img:~([^\]]+)\]/g, (m, h) => { const i = imgIdx(h); return i < 0 ? m : '[img:' + i + ']'; });
+  // theme and other preferences travel with the writing
+  const SETK = ['theme', 'mode', 'tc', 'fsize', 'lspace', 'comf', 'num', 'capstyle', 'detail', 'crt', 'boot'];
+  function settingsItem() { const o = {}; let any = false; SETK.forEach(k => { const v = load(K[k]); o[k] = v == null ? null : v; if (v != null) any = true; }); return any ? JSON.stringify(o) : null; }
+  function applySettings(o) {
+    SETK.forEach(k => { if (o[k] != null) store(K[k], String(o[k])); });
+    const v = k => (o[k] != null ? String(o[k]) : null);
+    if (v('theme')) { root.dataset.theme = v('theme'); $('theme').value = v('theme'); }
+    if (v('mode')) { $('mode').value = v('mode'); body.classList.toggle('screenplay', v('mode') === 'screenplay'); }
+    if ('tc' in o) { $('textcolor').value = o.tc || ''; if (o.tc) root.style.setProperty('--fg', o.tc); else root.style.removeProperty('--fg'); }
+    if (v('fsize')) { $('fsize').value = v('fsize'); root.style.setProperty('--fs', v('fsize') + 'px'); }
+    if (v('lspace')) { $('lspace').value = v('lspace'); root.style.setProperty('--lh', v('lspace')); }
+    if (v('comf') != null) body.classList.toggle('comfort', v('comf') === '1');
+    if (v('num') != null) body.classList.toggle('numbered', v('num') === '1');
+    if (v('capstyle')) { capStyle = v('capstyle'); $('capstyle').value = capStyle; }
+    if (v('detail')) $('detail').value = v('detail');
+    if (v('crt') != null) { const l = +v('crt') || 0; body.classList.remove('crt1', 'crt2'); if (l) body.classList.add('crt' + l); $('crtBtn').textContent = l ? '[CRT ' + l + ']' : '[CRT]'; }
+    if (v('boot') != null) $('bootBtn').textContent = v('boot') !== '0' ? '[Boot: on]' : '[Boot: off]';
+    updateScript(); updateStats(); repaintAll();
+  }
   function ensureUids() {
     let ch = false;
     lib.list.forEach(d => { if (!d.uid) { d.uid = d.journal ? 'j' + (d.journal === true ? 'journal' : d.journal) : Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4); ch = true; } });
@@ -2156,6 +2175,7 @@
       return c; }) });
     it.events = JSON.stringify(events);
     it.people = JSON.stringify({ next: people.next, list: people.list.map(p => { const c = Object.assign({}, p); if (c.img != null) { c.imgh = ih(c.img); delete c.img; } return c; }) });
+    const st = settingsItem(); if (st) it.settings = st;
     it.recipes = JSON.stringify({ next: recipes.next, list: recipes.list.map(p => { const c = Object.assign({}, p); if (c.img != null) { c.imgh = ih(c.img); delete c.img; } return c; }) });
     images.forEach((im, i) => { const h = ih(i); if (h) it['img_' + h] = JSON.stringify(im); });
     return it;
@@ -2210,6 +2230,7 @@
         return c; }), next: o.next || (o.list.length + 1), view: o.view === 'board' ? 'board' : 'grid' };
       fl.notes = true;
     } else if (k === 'events') { events = { list: o.list || [], next: o.next || ((o.list || []).length + 1) }; fl.events = true; }
+    else if (k === 'settings') { applySettings(o); fl.settings = true; }
     else if (k === 'recipes') {
       recipes = { list: (o.list || []).map(p => { const c = Object.assign({}, p); if ('imgh' in c) { const i = c.imgh ? imgIdx(c.imgh) : -1; delete c.imgh; c.img = i >= 0 ? i : null; } return c; }), next: o.next || ((o.list || []).length + 1) }; fl.recipes = true;
     } else if (k === 'people') {
@@ -2248,6 +2269,7 @@
         const head = heads[k], L = L0[k], R = head && !head.del ? head.h : null, B = base[k] || null;
         if (L != null && SY.st.lh[k] !== L) { SY.st.lh[k] = L; SY.st.lt[k] = SY.lastChange || Date.now(); }
         let act = decide(L, R, B, head);
+        if (k === 'settings' && act === 'conflict' && !B && R) act = 'pull';
         if (!act) { if (L === R) { if (L == null) delete base[k]; else base[k] = L; } continue; }
         if (act === 'conflict') {
           conflicts++;
@@ -2293,7 +2315,7 @@
     if (SY.again) { SY.again = false; syncSoon(); }
   }
   function syncSoon() { if (!SY.on || !SY.ready) return; clearTimeout(SY.t); SY.t = setTimeout(() => syncRun(), 12000); }
-  syncHook = k => { if (SY.apply) return; if (k === K.idx || k === K.notes || k === K.events || k === K.people || k === K.recipes || k === K.imgs || k.indexOf(K.body) === 0) { SY.lastChange = Date.now(); syncSoon(); } };
+  syncHook = k => { if (SY.apply) return; if (k === K.idx || k === K.notes || k === K.events || k === K.people || k === K.recipes || k === K.imgs || SETK.some(s => K[s] === k) || k.indexOf(K.body) === 0) { SY.lastChange = Date.now(); syncSoon(); } };
   function setSync(on) { SY.on = on; store('dos-writer-sync-on', on ? '1' : '0'); if (!SY.ready) { openGh(); return; } if (on) { syStatus('on'); syncRun(true); } else { clearTimeout(SY.t); syStatus('off'); flash('SYNC OFF'); } }
   // ---------- GitHub Gist sync (used when the artifact database is not available, e.g. the installed web app) ----------
   const GHK = 'dos-writer-gh';
