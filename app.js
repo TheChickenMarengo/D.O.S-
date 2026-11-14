@@ -2303,7 +2303,7 @@
     if (body) h['Content-Type'] = 'application/json'; if (etag) h['If-None-Match'] = etag;
     const r = await fetch('https://api.github.com' + path, { method, headers: h, body: body ? JSON.stringify(body) : undefined });
     if (r.status === 304) return { notModified: true };
-    if (!r.ok) { const e = new Error('GitHub ' + r.status); e.status = r.status; e.code = r.status === 401 ? 'revoked' : (r.status === 403 || r.status === 429) ? 'resource_exhausted' : 'unavailable'; throw e; }
+    if (!r.ok) { let gm = ''; try { gm = (await r.json()).message || ''; } catch (x) { /* ignore */ } const e = new Error('GitHub ' + r.status + ' ' + gm); e.status = r.status; e.gm = gm; e.code = r.status === 401 ? 'revoked' : (r.status === 403 || r.status === 429) ? 'resource_exhausted' : 'unavailable'; throw e; }
     return { json: await r.json(), etag: r.headers.get('ETag') };
   }
   function gistAdapter(tok, id) {
@@ -2354,10 +2354,15 @@
   }
   $('syncCfgBtn').onclick = openGh;
   $('ghcon').onclick = async () => {
-    const tok = $('ghtok').value.trim(); if (!tok) { $('ghmsg').textContent = 'Paste a token first.'; return; }
+    const tok = $('ghtok').value.replace(/["'\s]/g, '').replace(/^(bearer|token)/i, ''); if (!tok) { $('ghmsg').textContent = 'Paste a token first.'; return; }
+    if (/^github_pat_/.test(tok)) { $('ghmsg').textContent = 'That is a fine-grained token, and GitHub does not allow those to use gists. Make a classic token instead (it starts ghp_).'; return; }
     $('ghmsg').textContent = 'Connecting...';
     try { await ghConnect(tok); ghStart(); $('ghmsg').textContent = ''; closeOv('ghov'); flash('GITHUB SYNC CONNECTED'); syncRun(true); }
-    catch (e) { $('ghmsg').textContent = e.status === 401 ? 'GitHub rejected that token.' : e.status === 403 ? 'Token cannot use gists. Tick the "gist" scope.' : 'Could not connect. Check the token and your connection.'; }
+    catch (e) {
+      $('ghmsg').textContent = e.status === 401 ? 'GitHub says the token is invalid or expired (' + (e.gm || '401') + '). Make a new classic token with the gist box ticked and paste all of it.'
+        : e.status === 403 || e.status === 404 ? 'The token connected but cannot use gists (' + (e.gm || e.status) + '). Tick the "gist" scope on a classic token.'
+        : e.status ? 'GitHub error ' + e.status + ': ' + (e.gm || '') : 'Could not reach GitHub (network or browser blocked the request). Check your connection and try again.';
+    }
   };
   $('ghdis').onclick = () => { try { localStorage.removeItem(GHK); } catch (e) { /* ignore */ } SY.ready = false; SY.col = null; syStatus('off'); $('syncst').style.display = 'none'; closeOv('ghov'); flash('GITHUB SYNC DISCONNECTED'); };
 
