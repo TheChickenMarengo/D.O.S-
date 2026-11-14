@@ -1992,7 +1992,7 @@
       ['Insert image', pickImage], ['Notes board on/off', () => setNotesMode(!body.classList.contains('notes'))], ['Quick note (from selection)', quickNote], ['Notes: switch grid / board', toggleNotesView], ['Journal: today\'s entry', () => openJournal(null, 'journal')], ['Dream journal: today\'s entry', () => openJournal(null, 'dream')], ['Back to main document', () => $('backBtn').click()], ['Calendar', () => $('calBtn').click()], ['Contacts', () => setView('contacts')], ['New contact', () => { setView('contacts'); $('pnew').click(); }], ['Notes for this project', () => { setNotesMode(true); $('nfilter').value = 'cur'; renderNotes(); }], ['CRT effect: cycle off / scanlines / full', cycleCrt], ['Startup sequence on/off', () => $('bootBtn').click()], ['Replay startup sequence', runBoot], ['Notes: add image note', () => { setNotesMode(true); $('nimg').click(); }], ['Toggle drop cap', toggleCap], ['Cap chapter openers', capChapters], ['Remove all drop caps', removeAllCaps],
       ['Comfort mode on/off', () => setComfort(!body.classList.contains('comfort'))], ['Scene numbers on/off', () => setNum(!body.classList.contains('numbered'))],
       ['Copy as Fountain', () => copyOut(toFountain(), 'FOUNTAIN')], ['Copy as formatted screenplay', () => copyOut(toFormatted(), 'SCREENPLAY')],
-      ['Search everything', openGS], ['Sync now', () => (SY.on ? syncRun(true) : setSync(true))], ['Sync on/off', () => setSync(!SY.on)], ['Lock now', lockNow], ['Privacy lock: set or change PIN', startPin], ['Privacy lock: remove PIN', removePin], ['Hide screen', hideScreen],
+      ['Search everything', openGS], ['Sync now', () => (SY.on ? syncRun(true) : setSync(true))], ['Sync on/off', () => setSync(!SY.on)], ['Sync: GitHub token / settings', openGh], ['Lock now', lockNow], ['Privacy lock: set or change PIN', startPin], ['Privacy lock: remove PIN', removePin], ['Hide screen', hideScreen],
       ['Undo', undo], ['Redo', redo], ['Full screen', toggleFull], ['Help', () => toggleHelp(true)],
       ['Mode: prose', () => setMode('prose')], ['Mode: screenplay', () => setMode('screenplay')]]
       .concat(THEMES.map(([k, l]) => ['Theme: ' + l, () => setTheme(k)]))
@@ -2344,13 +2344,15 @@
       const g = a.find(x => x.description === 'D.O.S sync data'); if (g) id = g.id; if (a.length < 100) break;
     }
     if (!id) { const r = await ghReq(tok, 'POST', '/gists', { description: 'D.O.S sync data', public: false, files: { '_heads.json': { content: '{}' } } }); id = r.json.id; }
+    const old = ghCfg(); if (old && old.g !== id) { SY.st.base = {}; SY.st.lt = {}; SY.st.lh = {}; sySave(); }
     store(GHK, JSON.stringify({ t: tok, g: id, u: u.json.login })); return id;
   }
   function ghStart() { const c = ghCfg(); if (!c) return false; SY.col = gistAdapter(c.t, c.g); SY.ch = SY.col.ch; SY.ready = true; SY.kind = 'gist'; syStatus(SY.on ? 'on' : 'off'); return true; }
   function openGh() {
-    const c = ghCfg(); $('ghstate').textContent = c ? 'Connected as ' + c.u + '. Your writing syncs to a private gist on your GitHub.' : 'Not connected.';
+    const c = ghCfg(); $('ghstate').textContent = SY.kind === 'artifact' ? 'This copy syncs through the Claude artifact database. A GitHub token is only used by the installed web app.' : c ? 'Connected as ' + c.u + '. To change it, paste a new token and press Connect.' : 'Not connected.';
     $('ghtok').value = ''; $('ghdis').style.display = c ? '' : 'none'; $('ghmsg').textContent = ''; openOv('ghov'); if (!c) $('ghtok').focus();
   }
+  $('syncCfgBtn').onclick = openGh;
   $('ghcon').onclick = async () => {
     const tok = $('ghtok').value.trim(); if (!tok) { $('ghmsg').textContent = 'Paste a token first.'; return; }
     $('ghmsg').textContent = 'Connecting...';
